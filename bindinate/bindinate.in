@@ -4,7 +4,7 @@ usage()
 cat <<EOF
 Usage: bindinate [--package=PACKAGE --name=NAME --out=PATH --windowslibraryname=NAME -d=DEP1_VAR,dep1_pkg -d=DEP2_VAR,dep2_pkg --merge-with=GIRFILE1,GIRFILE2 --regenerate --build-libversions=[V1,V2|all]] --gir=GIRFILE
        bindinate --list-versions --gir=GIRFILE
-    --gir=GIRFILE              Gir filename to process (without path or extension. It will be picked up from /usr/share/gir-1.0)
+    --gir=GIRFILE              Gir filename to process (without path or extension. It will be picked up from @GIRDIR@ or $GI_TYPELIB_PATH)
     --package=PACKAGE          name of pc file (if the gir data with the package name is wrong)
     --name=NAME                Name for the assembly
                                If this argument is not given, it will be generated automatically from the namespace set in the gir file
@@ -72,12 +72,6 @@ for arg; do
   esac
 done
 
-if [ ! -e @GIRDIR@/$GIRFILE.gir ]; then
-	echo "@GIRDIR@/$GIRFILE.gir not found, exiting\n"
-   	usage
-	exit 1
-fi
-
 if [ -z "$OUTDIR" ]; then
 	OUTDIR=$GIRFILE/
 fi
@@ -117,6 +111,13 @@ find_gir () {
 GIRDIRS=$GI_TYPELIB_PATH:@GIRDIR@
 FULLGIRFILE=$(find_gir "$GIRFILE" "$GIRDIRS")
 
+if [ x$FULLGIRFILE == x ]; then
+	echo "$GIRFILE.gir not found, exiting\n"
+   	usage
+	exit 1
+fi
+
+
 if [ -n "$GIR_COPY_PATH" ]; then
 	echo "cp $FULLGIRFILE $GIR_COPY_PATH"
 	if [ x"$FULLGIRFILE" != "x" ]; then
@@ -151,7 +152,7 @@ if [ -n "$MERGEWITH" ]; then
 fi
 
 if [ -z "$PACKAGE" ]; then
-	PACKAGE=`@XSLTPROC@ --stringparam type package @PREPROCESSXSLT@ @GIRDIR@/$GIRFILE.gir`
+	PACKAGE=`@XSLTPROC@ --stringparam type package @PREPROCESSXSLT@ $FULLGIRFILE`
 fi
 ORIGINAL=$PACKAGE
 LIBS=`@XSLTPROC@ --stringparam type libs @PREPROCESSXSLT@ $FULLGIRFILE|sed 's/,/ /'`
